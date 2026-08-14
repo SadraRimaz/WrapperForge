@@ -26,7 +26,7 @@ import uuid
 from datetime import date
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -230,7 +230,7 @@ def delete_task(task_id: str):
     if task_id not in _tasks:
         raise HTTPException(status_code=404, detail="Task not found")
     del _tasks[task_id]
-    return JSONResponse(status_code=204, content=None)
+    return Response(status_code=204)
 
 
 @app.post(
