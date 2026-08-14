@@ -14,11 +14,12 @@ What it checks:
     - <language> is one of: python, go, javascript.
     - core/<api-name>/ exists and contains all required approved
       artifacts: contract.md, stage_plan.md, qc_interface.md,
-      qc_interface.openapi.json. This mirrors macro-planning's
-      promote.py incomplete-draft-set refusal, one level down: an
-      incomplete/unapproved core/<api-name>/ is treated as a hard
-      stop, not something to work around.
-    - qc_interface.openapi.json parses as valid JSON.
+      qc_interface.openapi.json, cases.json. This mirrors
+      macro-planning's promote.py incomplete-draft-set refusal, one
+      level down: an incomplete/unapproved core/<api-name>/ is treated
+      as a hard stop, not something to work around.
+    - qc_interface.openapi.json and cases.json each parse as valid
+      JSON.
     - Whether wrappers/<api-name>/<language>/ already has files in it
       (informational only — re-running for a language that was already
       built is allowed, e.g. after a plan revision, but the agent
@@ -50,6 +51,7 @@ REQUIRED_CORE_FILES = [
     "stage_plan.md",
     "qc_interface.md",
     "qc_interface.openapi.json",
+    "cases.json",
 ]
 
 
@@ -96,6 +98,21 @@ def main() -> int:
                 json.loads(openapi_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as e:
                 errors.append(f"qc_interface.openapi.json is not valid JSON: {e}")
+
+        cases_path = core_dir / "cases.json"
+        if cases_path.is_file():
+            try:
+                cases_doc = json.loads(cases_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as e:
+                errors.append(f"cases.json is not valid JSON: {e}")
+            else:
+                cases_list = (
+                    cases_doc.get("cases")
+                    if isinstance(cases_doc, dict)
+                    else cases_doc
+                )
+                if not cases_list:
+                    errors.append("cases.json has no test cases.")
 
     existing_wrapper_files = []
     if language in VALID_LANGUAGES:

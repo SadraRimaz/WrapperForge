@@ -1,10 +1,10 @@
 ---
 name: macro-planning
-description: Turns a hand-written API contract (contract.md) plus that API's OpenAPI spec into a language-agnostic implementation plan for building client wrapper libraries — a per-operation stage_plan.md, a QC-facing HTTP interface (qc_interface.md + qc_interface.openapi.json), and optional brief per-language steering notes. Runs a human-approval revision loop before promoting drafts into core/. Use when the user runs /macro-planning, references a contract file (e.g. core/mock-api/contract.md) together with an OpenAPI spec (e.g. backend/mock_api/openapi.json), or asks to plan/draft the macro-agent stage for a new API wrapper. Not for implementing the wrappers themselves (see /implement-wrapper) and not for writing contract.md, which is always hand-authored ahead of time.
+description: Turns a hand-written API contract (contract.md) plus that API's OpenAPI spec into a language-agnostic implementation plan for building client wrapper libraries — a per-operation stage_plan.md, a QC-facing HTTP interface (qc_interface.md + qc_interface.openapi.json), a fully-resolved static QC test-case list (cases.json), and optional brief per-language steering notes. Runs a human-approval revision loop before promoting drafts into core/. Use when the user runs /macro-planning, references a contract file (e.g. core/mock-api/contract.md) together with an OpenAPI spec (e.g. backend/mock_api/openapi.json), or asks to plan/draft the macro-agent stage for a new API wrapper. Not for implementing the wrappers themselves (see /implement-wrapper) and not for writing contract.md, which is always hand-authored ahead of time.
 license: See repository LICENSE.
 metadata:
   phase: "2"
-  produces: "stage_plan.md, qc_interface.md, qc_interface.openapi.json"
+  produces: "stage_plan.md, qc_interface.md, qc_interface.openapi.json, cases.json"
   project: "WrapperForge"
 ---
 
@@ -12,7 +12,7 @@ metadata:
 
 Single-run, language-agnostic planning stage of the WrapperForge pipeline
 (`doc/plan.md`, Phase 2). Consumes a hand-written `contract.md` and an
-API's OpenAPI spec, drafts three planning artifacts, runs an unbounded
+API's OpenAPI spec, drafts four planning artifacts, runs an unbounded
 human-approval revision loop on the drafts, and — only on explicit
 approval — promotes them into `core/<api-name>/` where the (separate,
 out-of-scope-here) `/implement-wrapper` skill is permitted to read from.
@@ -39,7 +39,7 @@ one repo.
 
 ## Inputs required
 
-Exactly two file references from the user, every run:
+Every run needs:
 
 1. A **contract file** (conventionally `contract.md`) — hand-written,
    fixed, authoritative for operation semantics.
@@ -47,8 +47,17 @@ Exactly two file references from the user, every run:
    — secondary source, used for HTTP-shape detail (status codes,
    response schemas actually exposed by the backend) and to flag
    operations it exposes that the contract doesn't mention.
+3. The **direct-backend base URL** — where the real backend will be
+   reachable at during QC runs (e.g. `http://localhost:8000`). This is
+   a plain string the user tells you in conversation, not a file. It
+   gets written into `cases.json` as `direct_base_url` so
+   `tests/audit.py` doesn't need it passed on every invocation later.
+   Ask for it directly if not given; don't guess or default it
+   silently — a wrong base URL silently breaks every QC run for this
+   API.
 
-If either is missing, ask for it rather than guessing a path.
+If the contract file or OpenAPI spec is missing, ask for it rather than
+guessing a path.
 
 ## Workflow
 
@@ -74,9 +83,9 @@ from the contract file's parent directory name (see
   wrong means drafting into the wrong folder.
 - Read `contract.md` and the OpenAPI spec in full before drafting.
 
-### 2. Draft the three artifacts
+### 2. Draft the four artifacts
 
-Write all three into `drafts/macro_output/<api-name>/` (create the
+Write all four into `drafts/macro_output/<api-name>/` (create the
 directory if needed):
 
 1. **`stage_plan.md`** — per-operation behavior spec. Follow
@@ -101,6 +110,19 @@ directory if needed):
    drift apart. Response schemas double as the QC comparison allowlist,
    so be deliberate about which fields are declared. Validate the JSON
    parses before moving on (see the guidance file for a one-line check).
+
+4. **`cases.json`** — the fully-resolved, static QC test-case list that
+   `tests/audit.py` will later replay as-is (no live generation, no
+   expected-output derivation — see `references/cases_template.md`).
+   Each case carries a `direct` and a `wrapper` call spec
+   (`{method, endpoint, body?}`), concrete enough that `audit.py` needs
+   zero routing logic of its own. Include the `direct_base_url` input
+   from the user at the top of the file. Roughly 15–20 cases,
+   deliberately chosen — happy path per operation, not-found,
+   invalid-input, and 2–3 `bulk_update` partial-failure cases at
+   minimum. Validate the JSON parses and every case has both `direct`
+   and `wrapper` specs before moving on (see the reference file for a
+   one-line check).
 
 Optionally, also write **`language_notes.md`**: a few lines per target
 language (Python / Go / JavaScript, or whatever languages this repo
@@ -142,15 +164,17 @@ python3 .claude/skills/macro-planning/scripts/promote.py <api-name> --repo-root 
 ```
 
 This copies `stage_plan.md`, `qc_interface.md`,
-`qc_interface.openapi.json` (and `language_notes.md` if present) from
-`drafts/macro_output/<api-name>/` to `core/<api-name>/`, refusing to run
-if the draft set is incomplete, and never touches `contract.md`. Report
-the script's output to the user (it prints exactly what was copied) and
-confirm `core/<api-name>/` is now the approved source for
-`/implement-wrapper`.
+`qc_interface.openapi.json`, `cases.json` (and `language_notes.md` if
+present) from `drafts/macro_output/<api-name>/` to `core/<api-name>/`,
+refusing to run if the draft set is incomplete, and never touches
+`contract.md`. Report the script's output to the user (it prints
+exactly what was copied) and confirm `core/<api-name>/` is now the
+approved source for `/implement-wrapper`, including the `cases.json`
+that `tests/audit.py` will run against once each language's server is
+up.
 
 If re-approving after a later revision, just re-run the promotion
-script — it overwrites the three promoted files without deleting
+script — it overwrites the four promoted files without deleting
 anything else already in `core/<api-name>/`.
 
 ## Notes

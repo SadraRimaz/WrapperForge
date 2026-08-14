@@ -18,7 +18,7 @@ Behavior:
     - Source:      <repo-root>/drafts/macro_output/<api-name>/
     - Destination: <repo-root>/core/<api-name>/
     - Required files in source: stage_plan.md, qc_interface.md,
-      qc_interface.openapi.json
+      qc_interface.openapi.json, cases.json
     - contract.md is NOT touched by this script. It is hand-written and
       is expected to already live at core/<api-name>/contract.md before
       macro-planning ever runs (see SKILL.md).
@@ -38,6 +38,7 @@ REQUIRED_FILES = [
     "stage_plan.md",
     "qc_interface.md",
     "qc_interface.openapi.json",
+    "cases.json",
 ]
 
 

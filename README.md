@@ -1,2 +1,2 @@
 # WrapperForge
-Contract-bound multi-agent pipeline that forges idiomatic API client wrappers in multiple languages from one shared spec. A macro agent drafts the contract (human-approved), micro agents implement it per language, and a blind QC harness validates each via seeded differential testing — no wrapper source ever inspected.
+Contract-bound multi-agent pipeline that forges idiomatic API client wrappers in multiple languages from one shared spec. A macro agent drafts the contract (human-approved) plus a static set of QC test cases, micro agents implement the wrapper per language, and a blind QC harness statically replays those cases — calling the real backend and the wrapper-server side by side and diffing responses — no wrapper source ever inspected.

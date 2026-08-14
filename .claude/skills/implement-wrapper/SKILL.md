@@ -1,10 +1,10 @@
 ---
 name: implement-wrapper
-description: Builds one language's client library + QC-facing server from an approved core/api-name/ folder (contract.md, stage_plan.md, qc_interface.md, qc_interface.openapi.json). Drafts a no-code implementation plan for the requested language, waits for human approval, then generates minimal-dependency, idiomatic code. Use when the user runs /implement-wrapper with a --language argument (python, go, or javascript), or asks to build/implement the wrapper or QC server for one of those languages against an already-approved core/ folder. Run once per language, three times total for full coverage. Not for drafting core/ itself — that's /macro-planning, which must be approved and promoted first.
+description: Builds one language's client library + QC-facing server from an approved core/api-name/ folder (contract.md, stage_plan.md, qc_interface.md, qc_interface.openapi.json, cases.json). Drafts a no-code implementation plan for the requested language, waits for human approval, then generates minimal-dependency, idiomatic code, starts the server, and runs tests/audit.py against it. Use when the user runs /implement-wrapper with a --language argument (python, go, or javascript), or asks to build/implement the wrapper or QC server for one of those languages against an already-approved core/ folder. Run once per language, three times total for full coverage. Not for drafting core/ itself — that's /macro-planning, which must be approved and promoted first.
 license: See repository LICENSE.
 metadata:
   phase: "3"
-  produces: "wrappers/api-name/language/lib and wrappers/api-name/language/server"
+  produces: "wrappers/api-name/language/lib and wrappers/api-name/language/server; runs tests/audit.py at the end"
   project: "WrapperForge"
 ---
 
@@ -16,23 +16,26 @@ Phase 3). Run manually, once per language, three times total
 triggered by `/macro-planning`. Reads only from an already-approved
 `core/<api-name>/`; never touches `drafts/`.
 
-Two steps, with a hard stop between them: draft a **no-code**
+Three stages, with a hard stop after the first: draft a **no-code**
 implementation plan for the requested language, wait for explicit
-approval, then generate the client library and QC-facing server.
+approval, generate the client library and QC-facing server, then start
+the server and run `tests/audit.py` against it as this run's final
+step.
 
 ## When this skill does NOT apply
 
 - Drafting or revising `core/<api-name>/` content (`contract.md`,
-  `stage_plan.md`, `qc_interface.md`, `qc_interface.openapi.json`) —
-  that's `/macro-planning`. This skill only reads that content, never
-  writes it.
+  `stage_plan.md`, `qc_interface.md`, `qc_interface.openapi.json`,
+  `cases.json`) — that's `/macro-planning`. This skill only reads that
+  content, never writes it.
 - Building more than one language in a single invocation. The user
   supplies exactly one `--language` value per run; if they ask for
   "all three" or don't specify one, ask which language this run is for
   rather than looping over all three yourself.
-- Running QC / differential testing (`tests/audit.py`) — that's Phase
-  4, a separate concern. This skill's job ends once the code exists and
-  has been smoke-tested to start and answer `GET /health`.
+- Starting or seeding the real backend itself (e.g. the mock API) —
+  that's started manually by the user, out-of-band, before this skill
+  runs. This skill starts and stops only the language-specific server
+  it just generated.
 
 ## Inputs required
 
@@ -54,12 +57,13 @@ python3 .claude/skills/implement-wrapper/scripts/preflight.py <api-name> <langua
 ```
 
 This checks that `<language>` is valid and that `core/<api-name>/`
-contains all four required approved artifacts (`contract.md`,
-`stage_plan.md`, `qc_interface.md`, `qc_interface.openapi.json`) —
-mirroring how `promote.py` refuses an incomplete draft set, one level
-down. It also validates `qc_interface.openapi.json` parses as JSON, and
-warns (without blocking) if `wrappers/<api-name>/<language>/` already
-has files in it from a prior run.
+contains all five required approved artifacts (`contract.md`,
+`stage_plan.md`, `qc_interface.md`, `qc_interface.openapi.json`,
+`cases.json`) — mirroring how `promote.py` refuses an incomplete draft
+set, one level down. It also validates `qc_interface.openapi.json` and
+`cases.json` each parse as JSON, and warns (without blocking) if
+`wrappers/<api-name>/<language>/` already has files in it from a prior
+run.
 
 - If `ok` is `false`, stop and surface the errors. A missing
   `core/<api-name>/` or an incomplete one means `/macro-planning`
@@ -68,10 +72,15 @@ has files in it from a prior run.
 - If there's a warning about existing wrapper files, mention it to the
   user before proceeding (re-running is fine, e.g. after a plan
   revision, but they should know prior output may be overwritten).
-- Read all four `core/<api-name>/` files in full before drafting the
+- Read all five `core/<api-name>/` files in full before drafting the
   plan. Load `references/<language>_guide.md` for the requested
   language too — its choices (HTTP client, error-handling shape, server
   framework) are what the plan will restate and the code will follow.
+  `cases.json` in particular tells you the exact endpoints/methods the
+  generated server must expose — the routes the server ends up with
+  must line up with what `cases.json`'s `wrapper` specs expect to call,
+  or the final QC step will fail on routing alone, before any real
+  comparison happens.
 
 ### 2. Draft the implementation plan
 
@@ -153,18 +162,60 @@ JavaScript) with `PORT` set, then confirm it answers `/health`:
 python3 .claude/skills/implement-wrapper/scripts/smoke_test_server.py <port>
 ```
 
-This only checks the `PORT` + `GET /health` convention — it's not full
-QC (that's `tests/audit.py`, Phase 4, out of scope here). Report the
-result and, if time allows, manually try one call per operation against
-the running server before considering this run complete, per
-`doc/plan.md`'s Phase 3 checklist.
+This is a lightweight pre-check — it only confirms the `PORT` +
+`GET /health` convention before spending a full QC run against a
+server that might not even be up. It is not a substitute for step 6.
+If this fails, stop and fix the server; don't proceed to a QC run
+against a server that can't pass its own health check.
+
+### 6. Run QC (`tests/audit.py`) against the running server
+
+The real backend (e.g. the mock API) is **not** started by this
+skill — the user starts and seeds it manually, out-of-band, before
+running `/implement-wrapper` (see `doc/plan.md` Phase 1). Confirm with
+the user that it's up and reachable at the `direct_base_url` recorded
+in `core/<api-name>/cases.json` before this step; if you can't confirm
+independently, ask.
+
+With the language server from step 5 still running, invoke the static
+QC runner:
+
+```bash
+python3 tests/audit.py \
+  --cases core/<api-name>/cases.json \
+  --openapi core/<api-name>/qc_interface.openapi.json \
+  --server-base-url http://localhost:<port>
+```
+
+`audit.py` is a pure black-box replay-and-compare loop: it never reads
+anything under `wrappers/<lang>/`, only speaks HTTP against the two
+base URLs. It loads the pre-approved `cases.json` as-is, calls the
+`direct` spec against the real backend and the `wrapper` spec against
+the server just started, compares responses restricted to the fields
+`qc_interface.openapi.json` declares for that response, and prints a
+`pass`/`fail` + reason per case plus a summary line. Exit code `0`
+means every case passed; non-zero means at least one failed.
+
+Report the full output to the user verbatim (case-by-case pass/fail,
+plus the summary line) — don't just say "QC passed" or "QC failed"
+without showing which cases and why. A clean all-pass run is not
+required to consider this language's `/implement-wrapper` run
+complete; honestly-reported, categorized failures are an acceptable
+outcome per `doc/plan.md`'s Phase 4/5 notes (e.g. `bulk_update`
+friction is expected and fine to surface). Stop the server once QC has
+finished running.
 
 ## Notes
 
 - Nothing in this skill chains into the next language automatically.
   Running Python, then Go, then JavaScript are three separate,
   user-triggered invocations, as `doc/plan.md` describes.
-- Nothing in this skill chains into Phase 4 (`tests/audit.py`) either.
+- This skill's own run now ends with a `tests/audit.py` invocation
+  (step 6) — Phase 4 QC for a given language happens automatically as
+  part of that language's `/implement-wrapper` run, not as a separate
+  later invocation. `tests/audit.py` itself remains reusable standalone
+  (e.g. to re-run QC later without rebuilding anything) — this skill
+  just also calls it once, at the end.
 - See `references/plan_template.md`, `references/python_guide.md`,
   `references/go_guide.md`, and `references/javascript_guide.md` for
   the detailed guidance this workflow points to at each step.
