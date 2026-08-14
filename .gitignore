@@ -20,6 +20,12 @@ parts/
 sdist/
 var/
 wheels/
+
+# WrapperForge: un-ignore each language's client library dir, which is
+# also (unfortunately) named lib/ per implement-wrapper's fixed layout.
+!wrappers/*/*/lib/
+!wrappers/*/*/lib/**
+wrappers/*/*/lib/__pycache__/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
