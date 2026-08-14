@@ -1,0 +1,281 @@
+{
+  "direct_base_url": "http://127.0.0.1:8000",
+  "cases": [
+    {
+      "case_id": "create_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks",
+        "body": { "title": "Buy milk", "due_date": "2026-09-01" }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/create",
+        "body": { "title": "Buy milk", "due_date": "2026-09-01" }
+      }
+    },
+    {
+      "case_id": "create_invalid_input",
+      "edge_case_label": "invalid_input",
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks",
+        "body": { "title": "Missing due date" }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/create",
+        "body": { "title": "Missing due date" }
+      }
+    },
+    {
+      "case_id": "get_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "GET",
+        "endpoint": "/tasks/seed-task-1"
+      },
+      "wrapper": {
+        "method": "GET",
+        "endpoint": "/wrapper/get/seed-task-1"
+      }
+    },
+    {
+      "case_id": "get_not_found",
+      "edge_case_label": "not_found",
+      "direct": {
+        "method": "GET",
+        "endpoint": "/tasks/does-not-exist-000"
+      },
+      "wrapper": {
+        "method": "GET",
+        "endpoint": "/wrapper/get/does-not-exist-000"
+      }
+    },
+    {
+      "case_id": "list_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "GET",
+        "endpoint": "/tasks"
+      },
+      "wrapper": {
+        "method": "GET",
+        "endpoint": "/wrapper/list"
+      }
+    },
+    {
+      "case_id": "update_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "PATCH",
+        "endpoint": "/tasks/seed-task-2",
+        "body": { "title": "Seed Task Two Updated", "done": true }
+      },
+      "wrapper": {
+        "method": "PATCH",
+        "endpoint": "/wrapper/update/seed-task-2",
+        "body": { "title": "Seed Task Two Updated", "done": true }
+      }
+    },
+    {
+      "case_id": "update_partial_fields",
+      "edge_case_label": null,
+      "direct": {
+        "method": "PATCH",
+        "endpoint": "/tasks/seed-task-1",
+        "body": { "done": true }
+      },
+      "wrapper": {
+        "method": "PATCH",
+        "endpoint": "/wrapper/update/seed-task-1",
+        "body": { "done": true }
+      }
+    },
+    {
+      "case_id": "update_not_found",
+      "edge_case_label": "not_found",
+      "direct": {
+        "method": "PATCH",
+        "endpoint": "/tasks/does-not-exist-001",
+        "body": { "title": "Will not apply" }
+      },
+      "wrapper": {
+        "method": "PATCH",
+        "endpoint": "/wrapper/update/does-not-exist-001",
+        "body": { "title": "Will not apply" }
+      }
+    },
+    {
+      "case_id": "update_invalid_input",
+      "edge_case_label": "invalid_input",
+      "direct": {
+        "method": "PATCH",
+        "endpoint": "/tasks/seed-task-1",
+        "body": { "due_date": "not-a-date" }
+      },
+      "wrapper": {
+        "method": "PATCH",
+        "endpoint": "/wrapper/update/seed-task-1",
+        "body": { "due_date": "not-a-date" }
+      }
+    },
+    {
+      "case_id": "list_done_filter",
+      "edge_case_label": null,
+      "direct": {
+        "method": "GET",
+        "endpoint": "/tasks?done=true"
+      },
+      "wrapper": {
+        "method": "GET",
+        "endpoint": "/wrapper/list?done=true"
+      }
+    },
+    {
+      "case_id": "bulk_update_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks/bulk_update",
+        "body": {
+          "items": [
+            { "id": "seed-task-1", "fields": { "due_date": "2026-04-10" } },
+            { "id": "seed-task-2", "fields": { "title": "Seed Task Two Bulk Updated" } }
+          ]
+        }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/bulk_update",
+        "body": {
+          "items": [
+            { "id": "seed-task-1", "fields": { "due_date": "2026-04-10" } },
+            { "id": "seed-task-2", "fields": { "title": "Seed Task Two Bulk Updated" } }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "bulk_update_partial_failure_1",
+      "edge_case_label": "partial_failure",
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks/bulk_update",
+        "body": {
+          "items": [
+            { "id": "seed-task-1", "fields": { "title": "Bulk PF1 Valid" } },
+            { "id": "does-not-exist-010", "fields": { "title": "Should fail" } }
+          ]
+        }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/bulk_update",
+        "body": {
+          "items": [
+            { "id": "seed-task-1", "fields": { "title": "Bulk PF1 Valid" } },
+            { "id": "does-not-exist-010", "fields": { "title": "Should fail" } }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "bulk_update_partial_failure_2",
+      "edge_case_label": "partial_failure",
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks/bulk_update",
+        "body": {
+          "items": [
+            { "id": "does-not-exist-020", "fields": { "title": "Should fail" } },
+            { "id": "seed-task-2", "fields": { "done": false } }
+          ]
+        }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/bulk_update",
+        "body": {
+          "items": [
+            { "id": "does-not-exist-020", "fields": { "title": "Should fail" } },
+            { "id": "seed-task-2", "fields": { "done": false } }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "bulk_update_partial_failure_3_all_fail",
+      "edge_case_label": "partial_failure",
+      "direct": {
+        "method": "POST",
+        "endpoint": "/tasks/bulk_update",
+        "body": {
+          "items": [
+            { "id": "does-not-exist-030", "fields": { "title": "Fail A" } },
+            { "id": "does-not-exist-031", "fields": { "title": "Fail B" } }
+          ]
+        }
+      },
+      "wrapper": {
+        "method": "POST",
+        "endpoint": "/wrapper/bulk_update",
+        "body": {
+          "items": [
+            { "id": "does-not-exist-030", "fields": { "title": "Fail A" } },
+            { "id": "does-not-exist-031", "fields": { "title": "Fail B" } }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "delete_happy_path",
+      "edge_case_label": null,
+      "direct": {
+        "method": "DELETE",
+        "endpoint": "/tasks/seed-task-3"
+      },
+      "wrapper": {
+        "method": "DELETE",
+        "endpoint": "/wrapper/delete/seed-task-3"
+      }
+    },
+    {
+      "case_id": "delete_not_found",
+      "edge_case_label": "not_found",
+      "direct": {
+        "method": "DELETE",
+        "endpoint": "/tasks/does-not-exist-002"
+      },
+      "wrapper": {
+        "method": "DELETE",
+        "endpoint": "/wrapper/delete/does-not-exist-002"
+      }
+    },
+    {
+      "case_id": "get_after_delete",
+      "edge_case_label": "not_found",
+      "direct": {
+        "method": "GET",
+        "endpoint": "/tasks/seed-task-3"
+      },
+      "wrapper": {
+        "method": "GET",
+        "endpoint": "/wrapper/get/seed-task-3"
+      }
+    },
+    {
+      "case_id": "delete_after_delete",
+      "edge_case_label": "not_found",
+      "direct": {
+        "method": "DELETE",
+        "endpoint": "/tasks/seed-task-3"
+      },
+      "wrapper": {
+        "method": "DELETE",
+        "endpoint": "/wrapper/delete/seed-task-3"
+      }
+    }
+  ]
+}

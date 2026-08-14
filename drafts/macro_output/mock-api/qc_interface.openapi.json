@@ -1,0 +1,288 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Tasks API — QC Interface",
+    "version": "1.0.0",
+    "description": "Machine-readable QC-facing HTTP contract. One route per contract.md operation (1:1 mapping). Every language's QC server (wrappers/mock-api/<lang>/server/) must implement exactly these routes, plus GET /health. Response schemas double as tests/audit.py's field comparison allowlist."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Server is ready to serve."
+          }
+        }
+      }
+    },
+    "/wrapper/create": {
+      "post": {
+        "summary": "Create a task",
+        "operationId": "create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TaskCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UncomparedError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wrapper/get/{id}": {
+      "get": {
+        "summary": "Get a task by id",
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UncomparedError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wrapper/list": {
+      "get": {
+        "summary": "List tasks",
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "done",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Task" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wrapper/update/{id}": {
+      "patch": {
+        "summary": "Update a task",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TaskUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UncomparedError" }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UncomparedError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wrapper/delete/{id}": {
+      "delete": {
+        "summary": "Delete a task",
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Task deleted."
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UncomparedError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wrapper/bulk_update": {
+      "post": {
+        "summary": "Bulk update tasks, tolerating partial failure",
+        "operationId": "bulk_update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BulkUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch applied; per-item outcomes in body.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BulkUpdateResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "done": { "type": "boolean" },
+          "due_date": { "type": "string", "format": "date" },
+          "priority_score": { "type": "number" },
+          "created_at": { "type": "string" }
+        },
+        "required": ["id", "title", "done", "due_date", "priority_score", "created_at"]
+      },
+      "TaskCreate": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "due_date": { "type": "string", "format": "date" }
+        },
+        "required": ["title", "due_date"]
+      },
+      "TaskUpdate": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "done": { "type": "boolean" },
+          "due_date": { "type": "string", "format": "date" }
+        }
+      },
+      "BulkUpdateItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "fields": { "$ref": "#/components/schemas/TaskUpdate" }
+        },
+        "required": ["id", "fields"]
+      },
+      "BulkUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BulkUpdateItem" }
+          }
+        },
+        "required": ["items"]
+      },
+      "BulkUpdateFailure": {
+        "type": "object",
+        "description": "Only `id` is part of the QC comparison allowlist. `error` is intentionally omitted here so per-language error-message wording differences don't fail QC — see qc_interface.md Notes.",
+        "properties": {
+          "id": { "type": "string" }
+        },
+        "required": ["id"]
+      },
+      "BulkUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "succeeded": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Task" }
+          },
+          "failed": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BulkUpdateFailure" }
+          }
+        },
+        "required": ["succeeded", "failed"]
+      },
+      "UncomparedError": {
+        "type": "object",
+        "description": "Deliberately declares no properties: for 404/422 paths only the HTTP status code is QC-compared (always, independent of schema), not body wording. Keeps each language's idiomatic error message from being flagged as a QC mismatch.",
+        "additionalProperties": true
+      }
+    }
+  }
+}
