@@ -9,6 +9,7 @@ the same sequence of calls.
 
 Run standalone:
     SEED=42 uvicorn main:app --reload --port 8000
+    $env:SEED=42; uvicorn main:app --reload --port 8000
 
 Endpoints:
     GET    /health
