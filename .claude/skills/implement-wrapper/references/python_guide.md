@@ -63,6 +63,7 @@ production hardening.
 
 ```
 wrappers/<api-name>/python/
+├── .venv/                 # dedicated venv for this wrapper — created with `uv venv`, never the backend's .venv
 ├── lib/
 │   ├── __init__.py
 │   ├── client.py          # the client class + typed methods
@@ -73,13 +74,37 @@ wrappers/<api-name>/python/
 └── requirements.txt       # requests, fastapi, uvicorn — nothing else unless justified
 ```
 
-## Dependencies
+## Environment & dependencies
 
-Keep `requirements.txt` to what's actually used:
-```
-requests
-fastapi
-uvicorn
-```
-Don't add `pydantic` explicitly (FastAPI pulls it in transitively) or
-anything else without a concrete reason tied to `stage_plan.md`.
+This wrapper gets its **own** virtual environment, isolated from
+`backend/mock_api/`'s. Never install into or run the server from the
+backend's `.venv` — the two are separate Python projects with separate
+`requirements.txt` files, and the backend keeps running as its own
+out-of-band process throughout.
+
+1. **Create the venv** at `wrappers/<api-name>/python/.venv`, pinned to
+   Python 3.12, using `uv`:
+   ```bash
+   cd wrappers/<api-name>/python
+   uv venv --python 3.12
+   ```
+2. **Write `requirements.txt`** to what's actually used — nothing more:
+   ```
+   requests
+   fastapi
+   uvicorn
+   ```
+   Don't add `pydantic` explicitly (FastAPI pulls it in transitively) or
+   anything else without a concrete reason tied to `stage_plan.md`.
+3. **Install into that venv** with `uv pip install`, not plain `pip`:
+   ```bash
+   uv pip install -r requirements.txt --python .venv
+   ```
+4. **Run the server from this venv**, never from the backend's or the
+   system interpreter:
+   ```bash
+   .venv/bin/uvicorn server.main:app --port "$PORT"
+   ```
+   (or `.venv\Scripts\uvicorn.exe` on Windows). Any smoke test or QC
+   run against this language's server assumes the process was started
+   this way.

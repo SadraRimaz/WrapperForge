@@ -152,11 +152,28 @@ Keep dependencies to what each language guide specifies (`requests` +
 standard library only, `"dependencies": {}`, for JavaScript) unless the
 approved plan explicitly called out a genuine gap.
 
+**Python only — dedicated venv, created here, not reused from the
+backend:**
+
+```bash
+cd wrappers/<api-name>/python
+uv venv --python 3.12
+# write requirements.txt (requests, fastapi, uvicorn)
+uv pip install -r requirements.txt --python .venv
+```
+
+Never install into or run this server from `backend/mock_api/`'s
+`.venv` — the two are separate projects. See
+`references/python_guide.md`'s "Environment & dependencies" section for
+the full rationale.
+
 ### 5. Smoke-test the process convention
 
 Start the generated server locally (start command depends on the
-language — `uvicorn` for Python, `go run` for Go, `node` for
-JavaScript) with `PORT` set, then confirm it answers `/health`:
+language — for Python, `.venv/bin/uvicorn server.main:app --port
+"$PORT"` from the dedicated venv created in step 4, never the backend's
+`.venv`; `go run` for Go; `node` for JavaScript) with `PORT` set, then
+confirm it answers `/health`:
 
 ```bash
 python3 .claude/skills/implement-wrapper/scripts/smoke_test_server.py <port>
