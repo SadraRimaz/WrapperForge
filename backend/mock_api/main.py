@@ -129,6 +129,36 @@ def _apply_update(task: dict, fields: TaskUpdate) -> dict:
     return task
 
 
+def _seed_fixture_tasks() -> None:
+    """Deterministically pre-populate a few fixed-id tasks at startup.
+
+    core/mock-api/cases.json needs literal, known-in-advance task ids for
+    get/update/delete/bulk_update happy-path QC cases; tests/audit.py
+    deliberately does no live derivation or response-chaining between
+    cases, and normal create() ids are random uuid4s the client can't
+    predict or set. These fixtures close that gap. Their priority_score
+    / created_at still come from the seeded generator, so process
+    restarts with the same SEED remain fully reproducible.
+    """
+    fixtures = [
+        ("seed-task-1", "Seed Task One", date(2026, 1, 15)),
+        ("seed-task-2", "Seed Task Two", date(2026, 2, 20)),
+        ("seed-task-3", "Seed Task Three", date(2026, 3, 25)),
+    ]
+    for task_id, title, due_date in fixtures:
+        _tasks[task_id] = {
+            "id": task_id,
+            "title": title,
+            "done": False,
+            "due_date": due_date.isoformat(),
+            "priority_score": generator.priority_score(),
+            "created_at": generator.created_at(),
+        }
+
+
+_seed_fixture_tasks()
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
