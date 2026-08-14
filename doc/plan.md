@@ -1,6 +1,6 @@
 # WrapperForge — Multi-Language API/DB Wrapper Factory (Implementation Plan)
 
-**Status:** Mock API built and validated → macro-agent phase next.
+**Status:** Mock API and `core/contract.md` built and validated → macro-agent phase next.
 **Current scope:** Pipeline — `API docs → macro-agent → human approval loop → 3× micro-agent → 3 working wrapper+server pairs`. Results logging (`results.json`) and paper-table generation are explicitly deferred.
 
 ---
@@ -88,7 +88,7 @@ created_at: datetime          # server-generated, seeded-random jitter
 ```
 WrapperForge/
 ├── core/                          # APPROVED artifacts only — micro-agents read ONLY from here
-│   ├── contract.md                # hand-written: Tasks CRUD semantics (fixed, written before any agent runs)
+│   ├── contract.md                # hand-written: Tasks CRUD semantics — DONE
 │   ├── stage_plan.md              # macro-agent output, promoted from drafts/ on approval
 │   ├── qc_interface.md            # macro-agent output, promoted from drafts/ on approval
 │   └── qc_interface.openapi.json  # macro-agent output, promoted from drafts/ on approval
@@ -130,7 +130,7 @@ WrapperForge/
 
 ## Phase 1: Core Contract (hand-written, before any agent runs)
 
-- [ ] Write `core/contract.md` by hand: the 6 operations above, exact field names/types, error semantics (404 on missing id, 422-equivalent on invalid input). This is the fixed foundation — write this yourself, don't delegate it.
+- [x] Write `core/contract.md` by hand: the 6 operations above, exact field names/types, error semantics (not-found on missing id, invalid-input on malformed request). This is the fixed foundation, written directly rather than delegated.
 - [x] Build `backend/mock_api/main.py` (FastAPI): implements all 6 operations against in-memory storage. Accepts a `SEED` env var at startup; `priority_score` and `created_at` jitter are derived deterministically from that seed via a `random.Random(seed)` instance scoped to the process (see `seed.py`). Exposes `GET /health`.
 - [x] Confirmed the mock backend produces **identical output across two separate process starts with the same `SEED`**, given the same call sequence — validated by hand (start, create two tasks, kill, restart same seed, repeat the same two creates, diff `priority_score`/`created_at`: identical). This load-bearing assumption for the differential-QC design holds.
 - [x] FastAPI's auto-generated OpenAPI spec saved as `backend/mock_api/openapi.json` — this is the "API docs" the macro-agent will consume in Phase 2.
@@ -180,7 +180,7 @@ WrapperForge/
 
 ## Definition of Done for this phase
 
-- [ ] `core/contract.md` hand-written and stable.
+- [x] `core/contract.md` hand-written and stable.
 - [ ] Mock backend built, seeded-determinism validated by hand.
 - [ ] Macro-agent produces all 3 required draft artifacts; approval loop reaches "approved"; promotion to `core/` works.
 - [ ] All 3 language micro-agent runs complete; each produces a working `lib/` + `server/`.
