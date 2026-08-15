@@ -1,0 +1,8 @@
+{
+  "name": "wrapperforge-mock-api-javascript",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tasks API client library + QC server (JavaScript) for WrapperForge's mock-api.",
+  "dependencies": {}
+}
